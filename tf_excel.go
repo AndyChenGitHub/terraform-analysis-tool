@@ -12,17 +12,38 @@ func addExcel(datas [][]interface{}) {
 		fmt.Println(err)
 		return
 	}
-	rows, err := f.GetRows("Sheet1")
+
+	sheetName := "分析报告" //+ cast.ToString(time.Now().Minute())
+
+	_ = f.DeleteSheet(sheetName)
+	_, _ = f.NewSheet(sheetName)
 	for i, data := range datas {
-		e := f.SetSheetRow("Sheet1", "A"+strconv.Itoa(len(rows)+i+1), &data)
+		e := f.SetSheetRow(sheetName, "A"+strconv.Itoa(i+1), &data)
 		if e != nil {
 			fmt.Println(e)
 		}
 	}
-
+	mergeCell(sheetName, f)
 	// 根据指定路径保存文件
 	if err = f.SaveAs("tf_template.xlsx"); err != nil {
 		fmt.Println(err)
+	}
+}
+
+func mergeCell(sheetName string, f *excelize.File) {
+	newRows, err := f.GetRows(sheetName)
+	for i, _ := range newRows {
+		r := i + 1 //excel 是从1开始的
+		if r < len(newRows) && newRows[i][0] == newRows[i+1][0] {
+			e := f.MergeCell(sheetName, "A"+strconv.Itoa(r), "A"+strconv.Itoa(r+1))
+			if e != nil {
+				fmt.Println(e)
+			}
+		}
+	}
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }
 

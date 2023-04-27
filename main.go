@@ -7,6 +7,7 @@ func main() {
 	//	os.Exit(1)
 	//}
 	//filePath := os.Args[1]
-	filePath := "/Users/andy/go/src/github/devops-terraform-master/prod/cn-prod/main.tf"
+	//filePath := "/Users/andy/go/src/github/devops-terraform-master/prod/cn-prod/main.tf"
+	filePath := "/Users/andy/go/src/github/devops-terraform-master/modules/alicloud/t12-vpc/main.tf"
 	tfRead(filePath)
 }

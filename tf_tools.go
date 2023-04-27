@@ -13,26 +13,11 @@ import (
 
 func tfRead(filePath string) {
 	blocks := getBlocks(filePath)
-	paths := getSourcePath(blocks)
-	var datas [][]interface{}
-	//data := []interface{}{"alicloud_eip", "Elastic IP Address (EIP)", "ID", "tencentcloud_eip", "Elastic IP (EIP) - 弹性公网 IP", "ID"}
+	paths, datas := getSourcePath(blocks)
 	for _, path := range paths {
 		newPath := getPath(filePath, path)
 		resourceBlocks := getBlocks(newPath)
 		for _, block := range resourceBlocks {
-			switch block.Type {
-			case "resource":
-				fmt.Printf("Resource: %s\n", block.Labels[0])
-			case "data":
-				fmt.Printf("Data Source: %s\n", block.Labels[0])
-			case "variable":
-				fmt.Printf("Variable: %s\n", block.Labels[0])
-			case "module":
-				fmt.Printf("module: %s\n", block.Labels[0])
-			case "provider":
-				fmt.Printf("provider: %s\n", block.Labels[0])
-			}
-
 			for _, attr := range block.Body.Attributes {
 				if attr.Name == "count" {
 					continue
@@ -92,16 +77,13 @@ func getBlocks(filePath string) hclsyntax.Blocks {
 	return body.Blocks
 }
 
-func getSourcePath(blocks hclsyntax.Blocks) []string {
+// 获取程序入口
+func getSourcePath(blocks hclsyntax.Blocks) ([]string, [][]interface{}) {
 	var paths []string
+	var providerName string
+	var datas [][]interface{}
 	for _, block := range blocks {
 		switch block.Type {
-		case "resource":
-			fmt.Printf("Resource: %s\n", block.Labels[0])
-		case "data":
-			fmt.Printf("Data Source: %s\n", block.Labels[0])
-		case "variable":
-			fmt.Printf("Variable: %s\n", block.Labels[0])
 		case "module":
 			for _, attr := range block.Body.Attributes {
 				//是否为变量值
@@ -115,24 +97,21 @@ func getSourcePath(blocks hclsyntax.Blocks) []string {
 				}
 			}
 		case "provider":
-			fmt.Printf("provider: %s\n", block.Labels[0])
+			providerName = block.Labels[0]
+		default:
+			if providerName == "" {
+				providerName = "ali" //默认阿里
+			}
+			for _, attr := range block.Body.Attributes {
+				if attr.Name == "count" {
+					continue
+				}
+				datas = append(datas, []interface{}{block.Labels[0], "", attr.Name})
+			}
 		}
+
 	}
-	return paths
-	//取参数和值
-	//for _, attr := range block.Body.Attributes {
-	//	//是否为变量值
-	//	typeName := reflect.TypeOf(attr.Expr).Elem().Name()
-	//	if typeName == "ScopeTraversalExpr" {
-	//		vb := attr.Expr.Variables()
-	//		fmt.Printf("  %s = %s.%s \n", attr.Name, vb[0][0].(hcl.TraverseRoot).Name, vb[0][1].(hcl.TraverseAttr).Name)
-	//	} else if typeName == "TemplateExpr" {
-	//		exp := attr.Expr.(*hclsyntax.TemplateExpr)
-	//		v, _ := exp.Parts[0].Value(nil)
-	//		fmt.Printf("  %s = %s \n", attr.Name, v.AsString())
-	//	} else if typeName == "FunctionCallExpr" {
-	//		fmt.Printf("  %s = %s \n", attr.Name, "element")
-	//	}
-	//
-	//}
+	newRow := []interface{}{providerName, providerName + "_product", providerName + "_arg", "tencentcloud", "tencentcloud_product", "tencentcloud_arg", "remark"}
+	datas = append([][]interface{}{newRow}, datas...)
+	return paths, datas
 }
