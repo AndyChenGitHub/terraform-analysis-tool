@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// 读取TF文件
 func tfRead(filePath string) {
 	blocks := getBlocks(filePath)
 	paths, datas := getSourcePath(blocks)
@@ -40,6 +41,7 @@ func tfRead(filePath string) {
 	addExcel(datas)
 }
 
+// 获取module下面的resource路径，主要是main入口
 func getPath(mainPath string, path string) string {
 	newPath := ""
 	sp := strings.Split(path, "/")
@@ -60,6 +62,7 @@ func getPath(mainPath string, path string) string {
 	return newPath + path[index*2:] + "/main.tf"
 }
 
+// 获取tf里面的block
 func getBlocks(filePath string) hclsyntax.Blocks {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {

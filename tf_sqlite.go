@@ -6,24 +6,30 @@ import (
 	"time"
 )
 
-type TencentcloudAlibabacloudProduct struct {
+type TencentCloudAlibabacloudProduct struct {
 	gorm.Model
-	tencentcloudProductName string
-	alibabacloudProductName string
+	tencentCloudProductName string
+	alibabaCloudProductName string
 	UpdateTime              time.Time
 }
-type TencentcloudAlibabacloudResource struct {
+type TencentCloudAlibabacloudResource struct {
 	gorm.Model
-	alibabacloudResource string
-	tencentcloudResource string
+	alibabaCloudResource string
+	tencentCloudResource string
 	sourcesType          string
-	tencentcloudTfUrl    string
+	tencentCloudTfUrl    string
 	UpdateTime           time.Time
 }
 
-func getTencentcloudAlibabacloudProduct() []TencentcloudAlibabacloudProduct {
-	var products []TencentcloudAlibabacloudProduct
-	getDB().Select(&products, "code = ?", "D42") // 查找 code 字段值为 D42 的记录
+func getTencentCloudAlibabacloudProduct() []TencentCloudAlibabacloudProduct {
+	var products []TencentCloudAlibabacloudProduct
+	getDB().Select(&products)
+	return products
+}
+
+func getTencentCloudAlibabacloudResource(sourcesType string) []TencentCloudAlibabacloudResource {
+	var products []TencentCloudAlibabacloudResource
+	getDB().Select(&products, "sources_type = ?", sourcesType) // 查找 code 字段值为 D42 的记录
 	return products
 }
 
