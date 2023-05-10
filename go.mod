@@ -3,8 +3,11 @@ module github/terraform-analysis-tool
 go 1.20
 
 require (
+	github.com/PuerkitoBio/goquery v1.8.1
+	github.com/anaskhan96/soup v1.2.5
 	github.com/hashicorp/hcl/v2 v2.16.2
-	github.com/spf13/cast v1.5.0
+	github.com/microcosm-cc/bluemonday v1.0.23
+	github.com/russross/blackfriday v1.6.0
 	github.com/xuri/excelize/v2 v2.7.1
 	gorm.io/driver/sqlite v1.5.0
 	gorm.io/gorm v1.25.0
@@ -12,9 +15,14 @@ require (
 
 require (
 	github.com/agext/levenshtein v1.2.1 // indirect
+	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/gorilla/css v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
