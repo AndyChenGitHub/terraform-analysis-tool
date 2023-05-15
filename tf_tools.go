@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -174,6 +176,34 @@ func getBlocks(filePath string) hclsyntax.Blocks {
 	return body.Blocks
 }
 
+// 读取URL文件
+func getURLBlocks(url string) hclsyntax.Blocks {
+	filePath := "main.tf"
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	f, err := os.Create(filePath)
+	io.Copy(f, resp.Body)
+
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+		os.Exit(1)
+	}
+	parser := hclparse.NewParser()
+	file, diags := parser.ParseHCL(content, filePath)
+	if diags.HasErrors() {
+		fmt.Printf("Error parsing HCL: %s\n", diags)
+		os.Exit(1)
+	}
+
+	body, _ := file.Body.(*hclsyntax.Body)
+	return body.Blocks
+}
+
 // 获取程序入口
 func getSourcePath(blocks hclsyntax.Blocks) ([]string, string, [][]interface{}) {
 	var paths []string
@@ -195,6 +225,7 @@ func getSourcePath(blocks hclsyntax.Blocks) ([]string, string, [][]interface{}) 
 			}
 		case "provider":
 			providerName = block.Labels[0]
+		case "locals":
 		default:
 			if providerName == "" {
 				providerName = "ali" //默认阿里
