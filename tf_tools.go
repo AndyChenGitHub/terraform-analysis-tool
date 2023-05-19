@@ -31,10 +31,8 @@ func tfRead(filePath string) {
 			for _, block := range resourceBlocks {
 
 				ty := "d"
-				productName := ""
-				tencentCloudProductName := ""
-				tencentCloudResources := ""
-				remark := ""
+				var productName, tencentCloudProductName, tencentCloudResources, remark, otherTfUrl, tfUrl = "", "", "", "", "", ""
+
 				var tencentCloudStackByte []byte
 				if block.Type == "resource" {
 					resRule := getResourceRules(block.Labels[0], providerName, productsRule)
@@ -44,6 +42,8 @@ func tfRead(filePath string) {
 					tencentCloudProductName = pd.TencentcloudProductName
 					tencentCloudResources = res.TencentcloudResource
 					remark = res.Remark
+					otherTfUrl = res.OtherTfUrl
+					tfUrl = res.TencentcloudTfUrl
 					ty = "r"
 				} else if block.Type == "data" {
 					resRule := getDataSourceRules(block.Labels[0], providerName, productsDataRule)
@@ -53,6 +53,8 @@ func tfRead(filePath string) {
 					tencentCloudProductName = pd.TencentcloudProductName
 					tencentCloudResources = dataRes.TencentcloudDataSource
 					remark = "data资源，" + dataRes.Remark
+					otherTfUrl = dataRes.OtherTfUrl
+					tfUrl = dataRes.TencentcloudTfUrl
 				} else {
 					continue
 				}
@@ -89,6 +91,8 @@ func tfRead(filePath string) {
 						tencentCloudResources,
 						arg,
 						remark,
+						otherTfUrl,
+						tfUrl,
 					}
 					datas = append(datas, data)
 				}
