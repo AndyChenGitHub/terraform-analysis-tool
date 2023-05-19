@@ -45,6 +45,6 @@ func getTencentCloudStackMarkdown(resourceName string, te string) []byte {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fetch: reading %s: %v\n", url, err)
 	}
-	println(url)
+	//println(url)
 	return body
 }

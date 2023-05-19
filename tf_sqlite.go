@@ -20,6 +20,7 @@ type Resources struct {
 	OtherTfUrl           string    `db:"other_tf_url"`
 	Company              string    `db:"company"`
 	UpdateTime           time.Time `db:"update_time"`
+	Remark               string    `db:"remark"`
 }
 
 type DataSources struct {
@@ -29,6 +30,7 @@ type DataSources struct {
 	OtherTfUrl             string    `db:"other_tf_url"`
 	Company                string    `db:"company"`
 	UpdateTime             time.Time `db:"update_time"`
+	Remark                 string    `db:"remark"`
 }
 
 type ProductResourceRule struct {

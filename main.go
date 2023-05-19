@@ -7,9 +7,10 @@ func main() {
 	//	os.Exit(1)
 	//}
 	//filePath := os.Args[1]
-	//filePath := "/Users/andy/go/src/github/devops-terraform-master/prod/cn-prod/main.tf"
+	filePath := "/Users/andy/go/src/github/devops-terraform-master/prod/cn-prod/main.tf"
 	//filePath := "https://github.com/terraform-tencentcloud-modules/terraform-tencentcloud-vpc/blob/master/main.tf"
-	filePath := "https://raw.githubusercontent.com/terraform-tencentcloud-modules/terraform-tencentcloud-vpc/master/main.tf"
+	//filePath := "https://raw.githubusercontent.com/terraform-tencentcloud-modules/terraform-tencentcloud-vpc/master/main.tf"
 
 	tfRead(filePath)
+
 }

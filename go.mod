@@ -3,8 +3,6 @@ module github/terraform-analysis-tool
 go 1.20
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.1
-	github.com/anaskhan96/soup v1.2.5
 	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/microcosm-cc/bluemonday v1.0.23
 	github.com/russross/blackfriday v1.6.0
@@ -15,7 +13,6 @@ require (
 
 require (
 	github.com/agext/levenshtein v1.2.1 // indirect
-	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
