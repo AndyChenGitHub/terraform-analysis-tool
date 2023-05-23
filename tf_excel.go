@@ -18,34 +18,36 @@ func addExcel(datas [][]string) {
 	_ = f.DeleteSheet(sheetName)
 	_, _ = f.NewSheet(sheetName)
 	for i, data := range datas {
-		rowData := data[1:8] // 移除第一个数组
+		rowData := data[1:9] // 移除第一个数组
 		e := f.SetSheetRow(sheetName, "A"+strconv.Itoa(i+1), &rowData)
 
+		//挂载链接
 		borderStyle, _ := f.NewStyle(&excelize.Style{
 			Font:      &excelize.Font{Underline: "single", Color: "0000FF"},
 			Alignment: &excelize.Alignment{Horizontal: "left", Vertical: "center"}})
-		if len(data) > 8 && data[8] != "" {
-			err = f.SetCellStyle(sheetName, "B"+strconv.Itoa(i+1), "B"+strconv.Itoa(i+1), borderStyle)
-			f.SetCellHyperLink(sheetName, "B"+strconv.Itoa(i+1), data[8], "External")
-		}
 		if len(data) > 9 && data[9] != "" {
+			err = f.SetCellStyle(sheetName, "B"+strconv.Itoa(i+1), "B"+strconv.Itoa(i+1), borderStyle)
+			f.SetCellHyperLink(sheetName, "B"+strconv.Itoa(i+1), data[9], "External")
+		}
+		if len(data) > 10 && data[10] != "" {
 			err = f.SetCellStyle(sheetName, "E"+strconv.Itoa(i+1), "E"+strconv.Itoa(i+1), borderStyle)
-			f.SetCellHyperLink(sheetName, "E"+strconv.Itoa(i+1), data[9], "External")
+			f.SetCellHyperLink(sheetName, "E"+strconv.Itoa(i+1), data[10], "External")
 		}
 
 		//备注设置自动换行
-		style, _ := f.NewStyle(&excelize.Style{Alignment: &excelize.Alignment{WrapText: true}})
-		f.SetCellStyle(sheetName, "G"+strconv.Itoa(i+1), "G"+strconv.Itoa(i+1), style)
+		style, _ := f.NewStyle(&excelize.Style{Alignment: &excelize.Alignment{WrapText: true, Horizontal: "left", Vertical: "center"}})
+		f.SetCellStyle(sheetName, "G"+strconv.Itoa(i+1), "H"+strconv.Itoa(i+1), style)
 
 		if e != nil {
 			fmt.Println(e)
 		}
 	}
-
 	mergeCell(sheetName, f)
 	//表头样式
 	borderStyle, _ := f.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}, Fill: excelize.Fill{Type: "pattern", Color: []string{"808080"}, Pattern: 1}})
-	err = f.SetCellStyle(sheetName, "A1", "G1", borderStyle)
+	err = f.SetCellStyle(sheetName, "A1", "H1", borderStyle)
+	f.SetColWidth(sheetName, "A", "F", 20)
+	f.SetColWidth(sheetName, "G", "H", 90)
 	// 根据指定路径保存文件
 	if err = f.SaveAs("tf_template.xlsx"); err != nil {
 		fmt.Println(err)
@@ -68,8 +70,8 @@ func mergeCell(sheetName string, f *excelize.File) {
 		if r < len(newRows) && len(newRows[i+1]) > 4 && len(newRows[i]) > 4 && newRows[i][4] != "" && newRows[i][4] == newRows[i+1][4] {
 			f.MergeCell(sheetName, "E"+strconv.Itoa(r), "E"+strconv.Itoa(r+1))
 		}
-		if r < len(newRows) && len(newRows[i+1]) > 6 && len(newRows[i]) > 6 && newRows[i][6] != "" && newRows[i][6] == newRows[i+1][6] {
-			f.MergeCell(sheetName, "G"+strconv.Itoa(r), "G"+strconv.Itoa(r+1))
+		if r < len(newRows) && len(newRows[i+1]) > 7 && len(newRows[i]) > 7 && newRows[i][7] != "" && newRows[i][7] == newRows[i+1][7] {
+			f.MergeCell(sheetName, "H"+strconv.Itoa(r), "H"+strconv.Itoa(r+1))
 		}
 	}
 	if err != nil {

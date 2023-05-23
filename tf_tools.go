@@ -33,7 +33,7 @@ func tfRead(filePath string) {
 				ty := "d"
 				var productName, tencentCloudProductName, tencentCloudResources, remark, otherTfUrl, tfUrl = "", "", "", "", "", ""
 
-				var tencentCloudStackByte []byte
+				var tencentCloudStackByte, aliyunMarkByte []byte
 				if block.Type == "resource" {
 					resRule := getResourceRules(block.Labels[0], providerName, productsRule)
 					pd := getTencentCloudProduct(resRule.ProductName, providerName, products)
@@ -58,10 +58,15 @@ func tfRead(filePath string) {
 				} else {
 					continue
 				}
+
+				aliyunResources := strings.Replace(block.Labels[0], "alicloud_", "", 1)
+				aliyunMarkByte = getAliyunMarkdown(aliyunResources, ty)
+
 				if tencentCloudResources != "" {
 					tencentCloudStackByte = getTencentCloudStackMarkdown(tencentCloudResources, ty)
 					tencentCloudResources = "tencentcloud_" + tencentCloudResources
 				}
+
 				//获取参数内容
 				for _, attr := range block.Body.Attributes {
 					if attr.Name == "count" {
@@ -81,7 +86,11 @@ func tfRead(filePath string) {
 					//} else if typeName == "FunctionCallExpr" {
 					//	fmt.Printf("  %s = %s \n", attr.Name, "element")
 					//}
-					arg := getTencentCloudStackArg(tencentCloudStackByte, attr.Name)
+
+					describe := getAliyunArgDesc(aliyunMarkByte, attr.Name)
+					arg, describeTen := getTencentCloudStackArgDesc(tencentCloudStackByte, attr.Name)
+					describe = describe + describeTen
+
 					data := []string{
 						productName + block.Labels[0] + attr.Name, //用于索引排序
 						productName,
@@ -90,6 +99,7 @@ func tfRead(filePath string) {
 						tencentCloudProductName,
 						tencentCloudResources,
 						arg,
+						describe,
 						remark,
 						otherTfUrl,
 						tfUrl,
@@ -297,7 +307,7 @@ func getSourcePath(blocks hclsyntax.Blocks) ([]string, string, [][]string) {
 		}
 
 	}
-	newRow := []string{"ID", providerName + "_product", providerName, providerName + "_arg", "tencentcloud_product", "tencentcloud", "tencentcloud_arg", "remark"}
+	newRow := []string{"ID", providerName + "_product", providerName, providerName + "_arg", "tencentcloud_product", "tencentcloud", "tencentcloud_arg", "arg_describe", "remark"}
 	datas = append([][]string{newRow}, datas...)
 	return paths, providerName, datas
 }
