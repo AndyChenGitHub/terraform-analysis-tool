@@ -14,125 +14,142 @@ import (
 	"strings"
 )
 
+type ResourcesData struct {
+	ProviderName     string
+	ProductsDataRule []ProductDataSourceRule
+	Products         []Products
+	Resources        []Resources
+	DataSources      []DataSources
+	ProductsRule     []ProductResourceRule
+}
+
 // 读取TF文件
 func tfRead(filePath string) {
 	blocks := getBlocks(filePath)
-	paths, providerName, datas := getSourcePath(blocks)
 	//为了避免重复查询数据库，数据前置
-	products := getProducts("")
-	productsRule := getProductResourceRules("")
-	productsDataRule := getProductDataSourceRules("")
-	resources := getResources(providerName)
-	dataSources := getDataSources(providerName)
+	paths, datas, resourcesData := getSourcePath(blocks)
+	if resourcesData.ProviderName == "" {
+		println("provider not find！ ")
+		return
+	}
+
 	for _, path := range paths {
 		newPaths := getPath(filePath, path)
 		for _, newPath := range newPaths {
 			resourceBlocks := getBlocks(newPath)
 			for _, block := range resourceBlocks {
-
-				ty := "d"
-				var productName, tencentCloudProductName, tencentCloudResources, remark, otherTfUrl, tfUrl = "", "", "", "", "", ""
-
-				var tencentCloudStackByte, aliyunMarkByte []byte
-				if block.Type == "resource" {
-					resRule := getResourceRules(block.Labels[0], providerName, productsRule)
-					pd := getTencentCloudProduct(resRule.ProductName, providerName, products)
-					res := getResourcesByOtherResource(block.Labels[0], providerName, resources)
-					productName = resRule.ProductName
-					tencentCloudProductName = pd.TencentcloudProductName
-					tencentCloudResources = res.TencentcloudResource
-					remark = res.Remark
-					otherTfUrl = res.OtherTfUrl
-					tfUrl = res.TencentcloudTfUrl
-					ty = "r"
-				} else if block.Type == "data" {
-					resRule := getDataSourceRules(block.Labels[0], providerName, productsDataRule)
-					pd := getTencentCloudProduct(resRule.ProductName, providerName, products)
-					dataRes := getDataSourcesByOtherResource(block.Labels[0], providerName, dataSources)
-					productName = resRule.ProductName
-					tencentCloudProductName = pd.TencentcloudProductName
-					tencentCloudResources = dataRes.TencentcloudDataSource
-					remark = "data资源，" + dataRes.Remark
-					otherTfUrl = dataRes.OtherTfUrl
-					tfUrl = dataRes.TencentcloudTfUrl
-				} else {
-					continue
-				}
-
-				aliyunResources := strings.Replace(block.Labels[0], "alicloud_", "", 1)
-				aliyunMarkByte = getAliyunMarkdown(aliyunResources, ty)
-
-				if tencentCloudResources != "" {
-					tencentCloudStackByte = getTencentCloudStackMarkdown(tencentCloudResources, ty)
-					tencentCloudResources = "tencentcloud_" + tencentCloudResources
-				}
-
-				//获取参数内容
-				for _, attr := range block.Body.Attributes {
-					if attr.Name == "count" {
-						continue
-					}
-					if filterRepeat(datas, productName, block.Labels[0], attr.Name) {
-						continue
-					}
-					//typeName := reflect.TypeOf(attr.Expr).Elem().Name()
-					//if typeName == "ScopeTraversalExpr" {
-					//	vb := attr.Expr.Variables()
-					//	fmt.Printf("  %s = %s.%s \n", attr.Name, vb[0][0].(hcl.TraverseRoot).Name, vb[0][1].(hcl.TraverseAttr).Name)
-					//} else if typeName == "TemplateExpr" {
-					//	exp := attr.Expr.(*hclsyntax.TemplateExpr)
-					//	v, _ := exp.Parts[0].Value(nil)
-					//	fmt.Printf("  %s = %s \n", attr.Name, v.AsString())
-					//} else if typeName == "FunctionCallExpr" {
-					//	fmt.Printf("  %s = %s \n", attr.Name, "element")
-					//}
-
-					describe := getAliyunArgDesc(aliyunMarkByte, attr.Name)
-					arg, describeTen := getTencentCloudStackArgDesc(tencentCloudStackByte, attr.Name)
-					describe = describe + describeTen
-
-					data := []string{
-						productName + block.Labels[0] + attr.Name, //用于索引排序
-						productName,
-						block.Labels[0],
-						attr.Name,
-						tencentCloudProductName,
-						tencentCloudResources,
-						arg,
-						describe,
-						remark,
-						otherTfUrl,
-						tfUrl,
-					}
-					datas = append(datas, data)
-				}
+				data := getResourceData(*block, resourcesData)
+				datas = append(datas, data...)
 			}
 		}
-
 	}
 
-	title := datas[:1]    // 取title
-	rowDatas := datas[1:] // 取后面的数据，进行排序
+	//if filterRepeat(datas, productName, block.Labels[0], attr.Name) {
+	//	continue
+	//}
+	newDatas := DeduplicateStringSlice(datas)
+	title := newDatas[:1]    // 取title
+	rowDatas := newDatas[1:] // 取后面的数据，进行排序
 	sort.Slice(rowDatas, func(i, j int) bool {
-		//前两列一样的情况下比较第二列
-		if rowDatas[i][0] == rowDatas[j][0] {
-			return rowDatas[i][1] < rowDatas[j][1]
-		}
 		return rowDatas[i][0] < rowDatas[j][0]
 	})
+
 	title = append(title, rowDatas...)
 	addExcel(title)
+
+	println("报表生成成功！")
 }
 
-// 过滤重复的资源,重复不需要计算
-func filterRepeat(datas [][]string, productName string, sourcesName string, arg string) bool {
-	for _, ds := range datas {
-		if ds[1] == productName && ds[2] == sourcesName && ds[3] == arg {
-			return true
-		}
+func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]string {
+	ty := "d"
+	var datas [][]string
+	var productName, tencentCloudProductName, tencentCloudResources, remark, otherTfUrl, tfUrl = "", "", "", "", "", ""
+
+	var tencentCloudStackByte, aliyunMarkByte []byte
+	if block.Type == "resource" {
+		resRule := getResourceRules(block.Labels[0], resourcesData.ProviderName, resourcesData.ProductsRule)
+		pd := getTencentCloudProduct(resRule.ProductName, resourcesData.ProviderName, resourcesData.Products)
+		res := getResourcesByOtherResource(block.Labels[0], resourcesData.ProviderName, resourcesData.Resources)
+		productName = resRule.ProductName
+		tencentCloudProductName = pd.TencentcloudProductName
+		tencentCloudResources = res.TencentcloudResource
+		remark = res.Remark
+		otherTfUrl = res.OtherTfUrl
+		tfUrl = res.TencentcloudTfUrl
+		ty = "r"
+	} else if block.Type == "data" {
+		resRule := getDataSourceRules(block.Labels[0], resourcesData.ProviderName, resourcesData.ProductsDataRule)
+		pd := getTencentCloudProduct(resRule.ProductName, resourcesData.ProviderName, resourcesData.Products)
+		dataRes := getDataSourcesByOtherResource(block.Labels[0], resourcesData.ProviderName, resourcesData.DataSources)
+		productName = resRule.ProductName
+		tencentCloudProductName = pd.TencentcloudProductName
+		tencentCloudResources = dataRes.TencentcloudDataSource
+		remark = "data资源，" + dataRes.Remark
+		otherTfUrl = dataRes.OtherTfUrl
+		tfUrl = dataRes.TencentcloudTfUrl
+	} else {
+		return datas
 	}
 
-	return false
+	aliyunResources := strings.Replace(block.Labels[0], "alicloud_", "", 1)
+	aliyunMarkByte = getAliyunMarkdown(aliyunResources, ty)
+
+	if tencentCloudResources != "" {
+		tencentCloudStackByte = getTencentCloudStackMarkdown(tencentCloudResources, ty)
+		tencentCloudResources = "tencentcloud_" + tencentCloudResources
+	}
+
+	//获取参数内容
+	for _, attr := range block.Body.Attributes {
+		if attr.Name == "count" {
+			continue
+		}
+
+		//typeName := reflect.TypeOf(attr.Expr).Elem().Name()
+		//if typeName == "ScopeTraversalExpr" {
+		//	vb := attr.Expr.Variables()
+		//	fmt.Printf("  %s = %s.%s \n", attr.Name, vb[0][0].(hcl.TraverseRoot).Name, vb[0][1].(hcl.TraverseAttr).Name)
+		//} else if typeName == "TemplateExpr" {
+		//	exp := attr.Expr.(*hclsyntax.TemplateExpr)
+		//	v, _ := exp.Parts[0].Value(nil)
+		//	fmt.Printf("  %s = %s \n", attr.Name, v.AsString())
+		//} else if typeName == "FunctionCallExpr" {
+		//	fmt.Printf("  %s = %s \n", attr.Name, "element")
+		//}
+
+		describe := getAliyunArgDesc(aliyunMarkByte, attr.Name)
+		arg, describeTen := getTencentCloudStackArgDesc(tencentCloudStackByte, attr.Name)
+		describe = describe + describeTen
+
+		data := []string{
+			productName + "_" + block.Labels[0] + "_" + attr.Name, //用于索引排序
+			productName,
+			block.Labels[0],
+			attr.Name,
+			tencentCloudProductName,
+			tencentCloudResources,
+			arg,
+			describe,
+			remark,
+			otherTfUrl,
+			tfUrl,
+		}
+		datas = append(datas, data)
+	}
+	return datas
+}
+
+// DeduplicateStringSlice 过滤重复的资源,重复不需要计算
+func DeduplicateStringSlice(slice [][]string) [][]string {
+	seen := make(map[string]bool)
+	deduplicated := make([][]string, 0, len(slice))
+	for _, s := range slice {
+		if !seen[s[0]] {
+			seen[s[0]] = true
+			deduplicated = append(deduplicated, s)
+		}
+	}
+	return deduplicated
 }
 
 func getDataSourcesByOtherResource(otherResource string, providerName string, res []DataSources) DataSources {
@@ -208,8 +225,10 @@ func getPath(mainPath string, path string) []string {
 			newPath += s + "/"
 		}
 	}
-
 	root := newPath + path[index*2:]
+	if len(sp) == 1 {
+		root = newPath + path
+	}
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -273,10 +292,11 @@ func getURLBlocks(url string) hclsyntax.Blocks {
 }
 
 // 获取程序入口
-func getSourcePath(blocks hclsyntax.Blocks) ([]string, string, [][]string) {
+func getSourcePath(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData) {
 	var paths []string
-	var providerName string
 	var datas [][]string
+	resourcesData := ResourcesData{}
+
 	for _, block := range blocks {
 		switch block.Type {
 		case "module":
@@ -292,22 +312,32 @@ func getSourcePath(blocks hclsyntax.Blocks) ([]string, string, [][]string) {
 				}
 			}
 		case "provider":
-			providerName = block.Labels[0]
+			resourcesData.ProviderName = block.Labels[0]
+
+			resourcesData.Products = getProducts("")
+			resourcesData.ProductsRule = getProductResourceRules("")
+			resourcesData.ProductsDataRule = getProductDataSourceRules("")
+
+			resourcesData.Resources = getResources(resourcesData.ProviderName)
+			resourcesData.DataSources = getDataSources(resourcesData.ProviderName)
 		case "locals":
 		default:
-			if providerName == "" {
-				providerName = "ali" //默认阿里
+			//一个tf语法中，一定得有 provider 信息
+			if resourcesData.ProviderName != "" {
+				data := getResourceData(*block, resourcesData)
+				datas = append(datas, data...)
 			}
-			for _, attr := range block.Body.Attributes {
-				if attr.Name == "count" {
-					continue
-				}
-				datas = append(datas, []string{"ID", block.Labels[0], "", attr.Name})
-			}
+
+			//for _, attr := range block.Body.Attributes {
+			//	if attr.Name == "count" {
+			//		continue
+			//	}
+			//	datas = append(datas, []string{"ID", block.Labels[0], "", attr.Name})
+			//}
 		}
 
 	}
-	newRow := []string{"ID", providerName + "_product", providerName, providerName + "_arg", "tencentcloud_product", "tencentcloud", "tencentcloud_arg", "arg_describe", "remark"}
+	newRow := []string{"ID", resourcesData.ProviderName + "_product", resourcesData.ProviderName, resourcesData.ProviderName + "_arg", "tencentcloud_product", "tencentcloud", "tencentcloud_arg", "arg_describe", "remark"}
 	datas = append([][]string{newRow}, datas...)
-	return paths, providerName, datas
+	return paths, datas, resourcesData
 }

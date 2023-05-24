@@ -35,8 +35,8 @@ func addExcel(datas [][]string) {
 		}
 
 		//备注设置自动换行
-		style, _ := f.NewStyle(&excelize.Style{Alignment: &excelize.Alignment{WrapText: true, Horizontal: "left", Vertical: "center"}})
-		f.SetCellStyle(sheetName, "G"+strconv.Itoa(i+1), "H"+strconv.Itoa(i+1), style)
+		//style, _ := f.NewStyle(&excelize.Style{Alignment: &excelize.Alignment{WrapText: true, Horizontal: "left", Vertical: "center"}})
+		//f.SetCellStyle(sheetName, "G"+strconv.Itoa(i+1), "H"+strconv.Itoa(i+1), style)
 
 		if e != nil {
 			fmt.Println(e)
