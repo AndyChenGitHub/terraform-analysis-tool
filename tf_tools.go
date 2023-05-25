@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,20 +21,26 @@ type ResourcesData struct {
 	ProductsRule     []ProductResourceRule
 }
 
-// 读取TF文件
+// tfRead 读取TF文件
 func tfRead(filePath string) {
-	blocks := getBlocks(filePath)
+	blocks := getLocalBlocks(filePath)
 	//为了避免重复查询数据库，数据前置
-	paths, datas, resourcesData := getSourcePath(blocks)
+	paths, datas, resourcesData := getSourceMain(blocks)
 	if resourcesData.ProviderName == "" {
 		println("provider not find！ ")
 		return
 	}
 
 	for _, path := range paths {
-		newPaths := getPath(filePath, path)
+		newPaths := getSourcePath(filePath, path)
 		for _, newPath := range newPaths {
-			resourceBlocks := getBlocks(newPath)
+			var resourceBlocks hclsyntax.Blocks
+			if strings.Contains(newPath, "https://raw.githubusercontent.com") {
+				resourceBlocks = getWebBlocks(newPath)
+			} else {
+				resourceBlocks = getLocalBlocks(newPath)
+			}
+
 			for _, block := range resourceBlocks {
 				data := getResourceData(*block, resourcesData)
 				datas = append(datas, data...)
@@ -44,9 +48,6 @@ func tfRead(filePath string) {
 		}
 	}
 
-	//if filterRepeat(datas, productName, block.Labels[0], attr.Name) {
-	//	continue
-	//}
 	newDatas := DeduplicateStringSlice(datas)
 	title := newDatas[:1]    // 取title
 	rowDatas := newDatas[1:] // 取后面的数据，进行排序
@@ -60,10 +61,11 @@ func tfRead(filePath string) {
 	println("报表生成成功！")
 }
 
+// getResourceData 获取资源数据，并返回报表数据
 func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]string {
 	ty := "d"
 	var datas [][]string
-	var productName, tencentCloudProductName, tencentCloudResources, remark, otherTfUrl, tfUrl = "", "", "", "", "", ""
+	var productName, tencentCloudProductName, tencentCloudResources, describe, remark, otherTfUrl, tfUrl = "", "", "", "", "", "", ""
 
 	var tencentCloudStackByte, aliyunMarkByte []byte
 	if block.Type == "resource" {
@@ -116,8 +118,12 @@ func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]str
 		//} else if typeName == "FunctionCallExpr" {
 		//	fmt.Printf("  %s = %s \n", attr.Name, "element")
 		//}
+		if resourcesData.ProviderName == "alicloud" {
+			describe = getAliyunArgDesc(aliyunMarkByte, attr.Name)
+		} else {
+			println("暂时不支持其他产品")
+		}
 
-		describe := getAliyunArgDesc(aliyunMarkByte, attr.Name)
 		arg, describeTen := getTencentCloudStackArgDesc(tencentCloudStackByte, attr.Name)
 		describe = describe + describeTen
 
@@ -206,11 +212,18 @@ func getTencentCloudProduct(otherProduct string, providerName string, products [
 	return r
 }
 
-// 获取module下面的resource路径，主要是main入口
-func getPath(mainPath string, path string) []string {
+// getSourcePath 获取module下面的resource路径，主要是main入口
+func getSourcePath(mainPath string, path string) []string {
 	newPath := ""
 	var retrunPaths []string
 	sp := strings.Split(path, "/")
+	// 当最后一个为 alicloud 且第一个为alibaba 或 terraform-alicloud-modules 认为是官网的
+	// terraform-alicloud-modules/rds/alicloud,alibaba/security-group/alicloud//modules/http-80
+	if len(sp) > 2 && strings.Contains("alibaba,terraform-alicloud-modules", sp[0]) && sp[2] == "alicloud" {
+		retrunPaths = append(retrunPaths, "https://raw.githubusercontent.com/terraform-alicloud-modules/terraform-alicloud-"+sp[1]+"/master/main.tf")
+		return retrunPaths
+	}
+
 	sp1 := strings.Split(mainPath, "/")
 	index := 1
 	for _, s := range sp {
@@ -245,8 +258,8 @@ func getPath(mainPath string, path string) []string {
 	return retrunPaths
 }
 
-// 获取tf里面的block
-func getBlocks(filePath string) hclsyntax.Blocks {
+// getLocalBlocks 获取本地tf里面的block
+func getLocalBlocks(filePath string) hclsyntax.Blocks {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error reading file: %s\n", err)
@@ -263,25 +276,11 @@ func getBlocks(filePath string) hclsyntax.Blocks {
 	return body.Blocks
 }
 
-// 读取URL文件
-func getURLBlocks(url string) hclsyntax.Blocks {
-	filePath := "main.tf"
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Printf("Error reading file: %s\n", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	f, err := os.Create(filePath)
-	io.Copy(f, resp.Body)
-
-	content, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		fmt.Printf("Error reading file: %s\n", err)
-		os.Exit(1)
-	}
+// getWebBlocks 读取官网的TF文件
+func getWebBlocks(url string) hclsyntax.Blocks {
+	content := getCloudMarkdown(url)
 	parser := hclparse.NewParser()
-	file, diags := parser.ParseHCL(content, filePath)
+	file, diags := parser.ParseHCL(content, "main.tf")
 	if diags.HasErrors() {
 		fmt.Printf("Error parsing HCL: %s\n", diags)
 		os.Exit(1)
@@ -291,8 +290,8 @@ func getURLBlocks(url string) hclsyntax.Blocks {
 	return body.Blocks
 }
 
-// 获取程序入口
-func getSourcePath(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData) {
+// getSourceMain 获取程序入口
+func getSourceMain(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData) {
 	var paths []string
 	var datas [][]string
 	resourcesData := ResourcesData{}

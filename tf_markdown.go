@@ -12,6 +12,7 @@ import (
 	"github.com/russross/blackfriday"
 )
 
+// getTencentCloudStackArgDesc 获取腾讯云的资源描述
 func getTencentCloudStackArgDesc(tencentByte []byte, arg string) (string, string) {
 	tencentByteMark := blackfriday.MarkdownCommon(tencentByte)
 	markHtmlTencentClioud := bluemonday.UGCPolicy().SanitizeBytes(tencentByteMark)
@@ -30,6 +31,7 @@ func getTencentCloudStackArgDesc(tencentByte []byte, arg string) (string, string
 	return "", ""
 }
 
+// getAliyunArgDesc 获取阿里云的参数描述
 func getAliyunArgDesc(aliyunByte []byte, arg string) string {
 	aliyunByteMark := blackfriday.MarkdownCommon(aliyunByte)
 	markHtmlAliyun := bluemonday.UGCPolicy().SanitizeBytes(aliyunByteMark)
@@ -48,27 +50,20 @@ func getAliyunArgDesc(aliyunByte []byte, arg string) string {
 	return ""
 }
 
+// getTencentCloudStackMarkdown 获取腾讯云的文档资源
 func getTencentCloudStackMarkdown(resourceName string, te string) []byte {
 	url := "https://raw.githubusercontent.com/tencentcloudstack/terraform-provider-tencentcloud/master/website/docs/" + te + "/" + resourceName + ".html.markdown"
-	// 根据URL获取资源
-	res, err := http.Get(url)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: %v\n", err)
-	}
-	// 读取资源数据 body: []byte
-	body, err := ioutil.ReadAll(res.Body)
-	// 关闭资源流
-	res.Body.Close()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: reading %s: %v\n", url, err)
-	}
-	//println(url)
-	return body
+	return getCloudMarkdown(url)
 }
 
-// /获取阿里云的文档资源
+// getAliyunMarkdown 获取阿里云的文档资源
 func getAliyunMarkdown(resourceName string, te string) []byte {
 	url := "https://raw.githubusercontent.com/aliyun/terraform-provider-alicloud/master/website/docs/" + te + "/" + resourceName + ".html.markdown"
+	return getCloudMarkdown(url)
+}
+
+// getCloudMarkdown 获取云的文档资源
+func getCloudMarkdown(url string) []byte {
 	// 根据URL获取资源
 	res, err := http.Get(url)
 	if err != nil {
@@ -77,10 +72,9 @@ func getAliyunMarkdown(resourceName string, te string) []byte {
 	// 读取资源数据 body: []byte
 	body, err := ioutil.ReadAll(res.Body)
 	// 关闭资源流
-	res.Body.Close()
+	defer res.Body.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fetch: reading %s: %v\n", url, err)
 	}
-	//println(url)
 	return body
 }
