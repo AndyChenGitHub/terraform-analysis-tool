@@ -25,9 +25,10 @@ type ResourcesData struct {
 func tfRead(filePath string) {
 	blocks := getLocalBlocks(filePath)
 	//为了避免重复查询数据库，数据前置
-	paths, datas, resourcesData := getSourceMain(blocks)
+	paths, datas, resourcesData := getSourceMain(blocks, filePath)
 	if resourcesData.ProviderName == "" {
 		println("provider not find！ ")
+
 		return
 	}
 
@@ -67,7 +68,7 @@ func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]str
 	var datas [][]string
 	var productName, tencentCloudProductName, tencentCloudResources, describe, remark, otherTfUrl, tfUrl = "", "", "", "", "", "", ""
 
-	var tencentCloudStackByte, aliyunMarkByte []byte
+	var tencentCloudStackByte, otherMarkByte []byte
 	if block.Type == "resource" {
 		resRule := getResourceRules(block.Labels[0], resourcesData.ProviderName, resourcesData.ProductsRule)
 		pd := getTencentCloudProduct(resRule.ProductName, resourcesData.ProviderName, resourcesData.Products)
@@ -93,8 +94,12 @@ func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]str
 		return datas
 	}
 
-	aliyunResources := strings.Replace(block.Labels[0], "alicloud_", "", 1)
-	aliyunMarkByte = getAliyunMarkdown(aliyunResources, ty)
+	otherResources := strings.Replace(block.Labels[0], resourcesData.ProviderName+"_", "", 1)
+	if resourcesData.ProviderName == "alicloud" {
+		otherMarkByte = getAliyunMarkdown(otherResources, ty)
+	} else if resourcesData.ProviderName == "aws" {
+		otherMarkByte = getAwsMarkdown(otherResources, ty)
+	}
 
 	if tencentCloudResources != "" {
 		tencentCloudStackByte = getTencentCloudStackMarkdown(tencentCloudResources, ty)
@@ -119,9 +124,9 @@ func getResourceData(block hclsyntax.Block, resourcesData ResourcesData) [][]str
 		//	fmt.Printf("  %s = %s \n", attr.Name, "element")
 		//}
 		if resourcesData.ProviderName == "alicloud" {
-			describe = getAliyunArgDesc(aliyunMarkByte, attr.Name)
-		} else {
-			println("暂时不支持其他产品")
+			describe = getAliyunArgDesc(otherMarkByte, attr.Name)
+		} else if resourcesData.ProviderName == "aws" {
+			describe = getAwsArgDesc(otherMarkByte, attr.Name)
 		}
 
 		arg, describeTen := getTencentCloudStackArgDesc(tencentCloudStackByte, attr.Name)
@@ -222,6 +227,9 @@ func getSourcePath(mainPath string, path string) []string {
 	if len(sp) > 2 && strings.Contains("alibaba,terraform-alicloud-modules", sp[0]) && sp[2] == "alicloud" {
 		retrunPaths = append(retrunPaths, "https://raw.githubusercontent.com/terraform-alicloud-modules/terraform-alicloud-"+sp[1]+"/master/main.tf")
 		return retrunPaths
+	} else if len(sp) > 2 && strings.Contains("aws,terraform-aws-modules", sp[0]) && sp[2] == "aws" {
+		retrunPaths = append(retrunPaths, "https://raw.githubusercontent.com/terraform-aws-modules/terraform-aws-"+sp[1]+"/master/main.tf")
+		return retrunPaths
 	}
 
 	sp1 := strings.Split(mainPath, "/")
@@ -291,7 +299,7 @@ func getWebBlocks(url string) hclsyntax.Blocks {
 }
 
 // getSourceMain 获取程序入口
-func getSourceMain(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData) {
+func getSourceMain(blocks hclsyntax.Blocks, filePath string) ([]string, [][]string, ResourcesData) {
 	var paths []string
 	var datas [][]string
 	resourcesData := ResourcesData{}
@@ -311,14 +319,7 @@ func getSourceMain(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData
 				}
 			}
 		case "provider":
-			resourcesData.ProviderName = block.Labels[0]
-
-			resourcesData.Products = getProducts("")
-			resourcesData.ProductsRule = getProductResourceRules("")
-			resourcesData.ProductsDataRule = getProductDataSourceRules("")
-
-			resourcesData.Resources = getResources(resourcesData.ProviderName)
-			resourcesData.DataSources = getDataSources(resourcesData.ProviderName)
+			getProvider(*block, &resourcesData)
 		case "locals":
 		default:
 			//一个tf语法中，一定得有 provider 信息
@@ -336,7 +337,30 @@ func getSourceMain(blocks hclsyntax.Blocks) ([]string, [][]string, ResourcesData
 		}
 
 	}
+
+	// 没有找到providerName的时候，重新根据路径查找
+	if resourcesData.ProviderName == "" {
+		blocksProvider := getLocalBlocks(strings.Replace(filePath, "main.tf", "providers.tf", 1))
+		for _, block := range blocksProvider {
+			if block.Type == "provider" {
+				getProvider(*block, &resourcesData)
+				break
+			}
+		}
+	}
+
 	newRow := []string{"ID", resourcesData.ProviderName + "_product", resourcesData.ProviderName, resourcesData.ProviderName + "_arg", "tencentcloud_product", "tencentcloud", "tencentcloud_arg", "arg_describe", "remark"}
 	datas = append([][]string{newRow}, datas...)
 	return paths, datas, resourcesData
+}
+
+func getProvider(block hclsyntax.Block, resourcesData *ResourcesData) {
+	resourcesData.ProviderName = block.Labels[0]
+
+	resourcesData.Products = getProducts("")
+	resourcesData.ProductsRule = getProductResourceRules("")
+	resourcesData.ProductsDataRule = getProductDataSourceRules("")
+
+	resourcesData.Resources = getResources(resourcesData.ProviderName)
+	resourcesData.DataSources = getDataSources(resourcesData.ProviderName)
 }

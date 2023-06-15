@@ -11,5 +11,7 @@ func main() {
 	//filePath := "https://github.com/terraform-tencentcloud-modules/terraform-tencentcloud-vpc/blob/master/main.tf"
 	//filePath := "/Users/andy/go/src/github/terraform-analysis-tool/tf_example/web-vpc/main.tf"
 	//filePath := "/Users/andy/go/src/github/terraform-analysis-tool/tf_example/local/main.tf"
+	//filePath := "/Users/andy/go/src/github/terraform-analysis-tool/tf_example/web-vpc-aws/main.tf"
+
 	tfRead(filePath)
 }

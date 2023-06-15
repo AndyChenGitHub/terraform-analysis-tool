@@ -50,6 +50,25 @@ func getAliyunArgDesc(aliyunByte []byte, arg string) string {
 	return ""
 }
 
+// getAwsArgDesc 获取AWS云的参数描述
+func getAwsArgDesc(aliyunByte []byte, arg string) string {
+	byteMark := blackfriday.MarkdownCommon(aliyunByte)
+	markHtml := bluemonday.UGCPolicy().SanitizeBytes(byteMark)
+	if markHtml == nil || strings.Contains(string(markHtml), "404: Not Found") {
+		return ""
+	}
+
+	re := regexp.MustCompile(`(?s)<h2>Argument Reference</h2>.*?<h2>Attributes Reference</h2>`)
+	argument := re.FindStringSubmatch(string(markHtml))[0]
+	codeRe := regexp.MustCompile("<li><code>" + arg + "</code> - (.*?)</li>")
+	rt := codeRe.FindAllStringSubmatch(argument, -1)
+	if len(rt) > 0 {
+		return "aws: " + rt[0][1] + "\n\n"
+	}
+
+	return ""
+}
+
 // getTencentCloudStackMarkdown 获取腾讯云的文档资源
 func getTencentCloudStackMarkdown(resourceName string, te string) []byte {
 	url := "https://raw.githubusercontent.com/tencentcloudstack/terraform-provider-tencentcloud/master/website/docs/" + te + "/" + resourceName + ".html.markdown"
@@ -59,6 +78,12 @@ func getTencentCloudStackMarkdown(resourceName string, te string) []byte {
 // getAliyunMarkdown 获取阿里云的文档资源
 func getAliyunMarkdown(resourceName string, te string) []byte {
 	url := "https://raw.githubusercontent.com/aliyun/terraform-provider-alicloud/master/website/docs/" + te + "/" + resourceName + ".html.markdown"
+	return getCloudMarkdown(url)
+}
+
+// getAwsMarkdown 获取AWS的文档资源
+func getAwsMarkdown(resourceName string, te string) []byte {
+	url := "https://raw.githubusercontent.com/hashicorp/terraform-provider-aws/main/website/docs/" + te + "/" + resourceName + ".html.markdown"
 	return getCloudMarkdown(url)
 }
 
