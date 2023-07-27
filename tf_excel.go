@@ -63,20 +63,22 @@ func mergeCell(sheetName string, f *excelize.File) {
 	newRows, err := f.GetRows(sheetName)
 	for i, _ := range newRows {
 		r := i + 1 //excel 是从1开始的
-		if r < len(newRows) && newRows[i][0] == newRows[i+1][0] && newRows[i][0] != "" {
-			f.MergeCell(sheetName, "A"+strconv.Itoa(r), "A"+strconv.Itoa(r+1))
-		}
-		if r < len(newRows) && newRows[i][1] == newRows[i+1][1] && newRows[i][1] != "" {
-			f.MergeCell(sheetName, "B"+strconv.Itoa(r), "B"+strconv.Itoa(r+1))
-		}
-		if r < len(newRows) && len(newRows[i+1]) > 3 && newRows[i][3] != "" && newRows[i][3] == newRows[i+1][3] {
-			f.MergeCell(sheetName, "D"+strconv.Itoa(r), "D"+strconv.Itoa(r+1))
-		}
-		if r < len(newRows) && len(newRows[i+1]) > 4 && len(newRows[i]) > 4 && newRows[i][4] != "" && newRows[i][4] == newRows[i+1][4] {
-			f.MergeCell(sheetName, "E"+strconv.Itoa(r), "E"+strconv.Itoa(r+1))
-		}
-		if r < len(newRows) && len(newRows[i+1]) > 7 && len(newRows[i]) > 7 && newRows[i][7] != "" && newRows[i][7] == newRows[i+1][7] {
-			f.MergeCell(sheetName, "H"+strconv.Itoa(r), "H"+strconv.Itoa(r+1))
+		if r < len(newRows) {
+			if newRows[i][0] == newRows[i+1][0] && newRows[i][0] != "" {
+				f.MergeCell(sheetName, "A"+strconv.Itoa(r), "A"+strconv.Itoa(r+1))
+			}
+			if newRows[i][1] == newRows[i+1][1] && newRows[i][1] != "" {
+				f.MergeCell(sheetName, "B"+strconv.Itoa(r), "B"+strconv.Itoa(r+1))
+			}
+			if len(newRows[i]) > 3 && len(newRows[i+1]) > 3 && newRows[i][3] != "" && newRows[i][3] == newRows[i+1][3] {
+				f.MergeCell(sheetName, "D"+strconv.Itoa(r), "D"+strconv.Itoa(r+1))
+			}
+			if len(newRows[i]) > 4 && len(newRows[i+1]) > 4 && len(newRows[i]) > 4 && newRows[i][4] != "" && newRows[i][4] == newRows[i+1][4] {
+				f.MergeCell(sheetName, "E"+strconv.Itoa(r), "E"+strconv.Itoa(r+1))
+			}
+			if len(newRows[i]) > 7 && len(newRows[i+1]) > 7 && len(newRows[i]) > 7 && newRows[i][7] != "" && newRows[i][7] == newRows[i+1][7] {
+				f.MergeCell(sheetName, "H"+strconv.Itoa(r), "H"+strconv.Itoa(r+1))
+			}
 		}
 	}
 	if err != nil {
