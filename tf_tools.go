@@ -22,14 +22,14 @@ type ResourcesData struct {
 }
 
 // tfRead 读取TF文件
-func tfRead(filePath string) {
+func tfRead(filePath string) error {
 	blocks := getLocalBlocks(filePath)
 	//为了避免重复查询数据库，数据前置
 	paths, datas, resourcesData := getSourceMain(blocks, filePath)
 	if resourcesData.ProviderName == "" {
 		println("provider not find！ ")
 
-		return
+		return fmt.Errorf("provider not find！ ")
 	}
 
 	for _, path := range paths {
@@ -57,9 +57,12 @@ func tfRead(filePath string) {
 	})
 
 	title = append(title, rowDatas...)
-	addExcel(title)
+	err := addExcel(title)
+	if err != nil {
+		return err
+	}
 
-	println("报表生成成功！")
+	return nil
 }
 
 // getResourceData 获取资源数据，并返回报表数据

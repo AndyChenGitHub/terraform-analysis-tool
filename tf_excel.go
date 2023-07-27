@@ -4,21 +4,19 @@ import (
 	"fmt"
 	"github.com/xuri/excelize/v2"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
-func addExcel(datas [][]string) {
-	path := GetAppPath()
-	f, err := excelize.OpenFile(path + "/tf_template.xlsx")
+func addExcel(datas [][]string) error {
+	var exPath = GetAppPath() + "/tf_report.xlsx"
+	f, err := excelize.OpenFile(exPath)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return err
 	}
 
-	sheetName := "分析报告" //+ cast.ToString(time.Now().Minute())
+	sheetName := "analysis report" //+ cast.ToString(time.Now().Minute())
 
 	_ = f.DeleteSheet(sheetName)
 	_, _ = f.NewSheet(sheetName)
@@ -54,9 +52,11 @@ func addExcel(datas [][]string) {
 	f.SetColWidth(sheetName, "A", "F", 20)
 	f.SetColWidth(sheetName, "G", "H", 90)
 	// 根据指定路径保存文件
-	if err = f.SaveAs("tf_template.xlsx"); err != nil {
+	if err = f.SaveAs(exPath); err != nil {
 		fmt.Println(err)
+		return err
 	}
+	return nil
 }
 
 func mergeCell(sheetName string, f *excelize.File) {
@@ -88,8 +88,10 @@ func mergeCell(sheetName string, f *excelize.File) {
 }
 
 func GetAppPath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	return path[:index]
+	executablePath, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	executableDir := filepath.Dir(executablePath)
+	return executableDir
 }

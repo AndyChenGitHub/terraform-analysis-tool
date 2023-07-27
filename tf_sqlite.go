@@ -51,7 +51,7 @@ func getProducts(company string) []Products {
 	if company != "" {
 		clauses = append(clauses, clause.Eq{Column: "company", Value: company})
 	}
-	getDB().Debug().Clauses(clauses...).Find(&products) // and tencentcloud_product_name!=""
+	getDB().Clauses(clauses...).Find(&products) // and tencentcloud_product_name!=""
 	return products
 }
 
@@ -80,7 +80,7 @@ func getProductResourceRules(company string) []ProductResourceRule {
 	if company != "" {
 		clauses = append(clauses, clause.Eq{Column: "company", Value: company})
 	}
-	getDB().Debug().Clauses(clauses...).Find(&productResourceRule)
+	getDB().Clauses(clauses...).Find(&productResourceRule)
 	return productResourceRule
 }
 
@@ -90,7 +90,7 @@ func getProductDataSourceRules(company string) []ProductDataSourceRule {
 	if company != "" {
 		clauses = append(clauses, clause.Eq{Column: "company", Value: company})
 	}
-	getDB().Debug().Clauses(clauses...).Find(&productResourceRule)
+	getDB().Clauses(clauses...).Find(&productResourceRule)
 	return productResourceRule
 }
 
