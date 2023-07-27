@@ -95,7 +95,8 @@ func getProductDataSourceRules(company string) []ProductDataSourceRule {
 }
 
 func getDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
+	path := GetAppPath()
+	db, err := gorm.Open(sqlite.Open(path+"/data.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}

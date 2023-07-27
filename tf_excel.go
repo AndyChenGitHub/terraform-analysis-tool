@@ -3,11 +3,16 @@ package main
 import (
 	"fmt"
 	"github.com/xuri/excelize/v2"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func addExcel(datas [][]string) {
-	f, err := excelize.OpenFile("tf_template.xlsx")
+	path := GetAppPath()
+	f, err := excelize.OpenFile(path + "/tf_template.xlsx")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -78,4 +83,11 @@ func mergeCell(sheetName string, f *excelize.File) {
 		fmt.Println(err)
 		return
 	}
+}
+
+func GetAppPath() string {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	index := strings.LastIndex(path, string(os.PathSeparator))
+	return path[:index]
 }
